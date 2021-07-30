@@ -1,0 +1,17 @@
+name: cit
+version: "1.0"
+author: Alok P <alok8bb@gmail.com>
+about: Clone specific GitHub directories
+args:
+    - URL:
+          about: URL to the GitHub directory
+          required: true
+          index: 1
+    - zip:
+          short: z
+          multiple: false
+          about: Clone zipped directory
+    - link:
+          short: l
+          multiple: false
+          about: Generate download link to zipped file
