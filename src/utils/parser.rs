@@ -1,5 +1,7 @@
 use crate::utils::requests;
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 use url::Url;
 
 #[derive(Debug)]
@@ -58,13 +60,23 @@ pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
 }
 
 pub async fn fetch_data(data: Directory) -> Result<(), Box<dyn Error>> {
-    let url = format!(
-        "https://api.github.com/repos/{}/{}/contents/",
-        data.username, data.repository
-    );
-    let client = reqwest::Client::new();
+    let url = if data.path == "" {
+        format!(
+            "https://api.github.com/repos/{}/{}/contents/",
+            data.username, data.repository
+        )
+    } else {
+        format!(
+            "https://api.github.com/repos/{}/{}/contents{}?ref={}",
+            data.username, data.repository, data.path, data.branch
+        )
+    };
 
-    match requests::get_dir(url.to_string(), &client).await {
+    let client = reqwest::Client::new();
+    let path = format!("./{}", data.root);
+    fs::create_dir(&path)?;
+
+    match requests::get_dir(url, &client, Path::new(&path)).await {
         Err(err) => println!("{}", err.to_string()),
         Ok(_) => (),
     };

@@ -1,7 +1,10 @@
 use async_recursion::async_recursion;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+use std::{error::Error, fs};
 
 pub type ApiData = Vec<ApiDatum>;
 
@@ -30,7 +33,7 @@ pub struct Links {
 }
 
 #[async_recursion]
-pub async fn get_dir(url: String, client: &Client) -> Result<(), Box<dyn Error>> {
+pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box<dyn Error>> {
     let res = client
         .get(url)
         .header("User-Agent", "request")
@@ -41,11 +44,20 @@ pub async fn get_dir(url: String, client: &Client) -> Result<(), Box<dyn Error>>
 
     for obj in res {
         if obj.api_datum_type == "dir" {
-            get_dir(obj.links.links_self, &client).await?;
+            let dir_name = dir.join(obj.name);
+            fs::create_dir(&dir_name)?;
+            get_dir(obj.links.links_self, &client, dir_name.as_path()).await?;
         } else {
-            println!("{}", obj.name);
+            let mut file = File::create(dir.join(obj.name))?;
+            let file_content = get_filedata(obj.download_url.unwrap()).await?;
+            file.write_all(file_content.as_bytes())?;
         }
     }
 
     Ok(())
+}
+
+pub async fn get_filedata(url: String) -> Result<String, Box<dyn Error>> {
+    let res = reqwest::get(url).await?.text().await?;
+    Ok(res)
 }
