@@ -1,7 +1,7 @@
 use clap::{load_yaml, App};
 use std::process;
 
-mod lib;
+mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -10,7 +10,7 @@ async fn main() {
 
     let url = matches.value_of("URL");
 
-    let path = match lib::parse_url(url.unwrap()) {
+    let path = match utils::parser::parse_url(url.unwrap()) {
         Ok(path) => path,
         Err(err) => {
             println!("{}", err.to_string());
@@ -18,7 +18,7 @@ async fn main() {
         }
     };
 
-    let data = match lib::parse_path(&path) {
+    let data = match utils::parser::parse_path(&path) {
         Ok(data) => data,
         Err(err) => {
             println!("{}", err);
@@ -26,7 +26,7 @@ async fn main() {
         }
     };
 
-    match lib::fetch_data(data).await {
+    match utils::parser::fetch_data(data).await {
         Err(err) => println!("{}", err.to_string()),
         Ok(_) => (),
     };

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use crate::utils::requests;
 use std::error::Error;
 use url::Url;
 
@@ -9,32 +9,6 @@ pub struct Directory {
     path: String,
     username: String,
     repository: String,
-}
-
-pub type ApiData = Vec<ApiDatum>;
-
-#[derive(Serialize, Deserialize)]
-pub struct ApiDatum {
-    name: String,
-    path: String,
-    sha: String,
-    size: i64,
-    url: String,
-    html_url: String,
-    git_url: String,
-    download_url: Option<String>,
-    #[serde(rename = "type")]
-    api_datum_type: String,
-    #[serde(rename = "_links")]
-    links: Links,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Links {
-    #[serde(rename = "self")]
-    links_self: String,
-    git: String,
-    html: String,
 }
 
 pub fn parse_url(url: &str) -> Result<String, Box<dyn Error>> {
@@ -57,7 +31,6 @@ pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
         return Err("Error parsing URL".into());
     }
 
-    println!("{:?} {}", patterns, patterns.len());
     let data = Directory {
         username: patterns[1].to_string(),
         repository: patterns[2].to_string(),
@@ -81,8 +54,6 @@ pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
         },
     };
 
-    println!("{:#?}", data);
-
     Ok(data)
 }
 
@@ -92,16 +63,11 @@ pub async fn fetch_data(data: Directory) -> Result<(), Box<dyn Error>> {
         data.username, data.repository
     );
     let client = reqwest::Client::new();
-    let res = client
-        .get(url)
-        .header("User-Agent", "request")
-        .send()
-        .await?
-        .json::<ApiData>()
-        .await?;
 
-    for obj in res {
-        println!("{}", obj.size);
-    }
+    match requests::get_dir(url.to_string(), &client).await {
+        Err(err) => println!("{}", err.to_string()),
+        Ok(_) => (),
+    };
+
     Ok(())
 }
