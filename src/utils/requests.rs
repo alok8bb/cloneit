@@ -39,18 +39,30 @@ pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box
         .header("User-Agent", "request")
         .send()
         .await?
-        .json::<ApiData>()
+        .text()
         .await?;
 
-    for obj in res {
-        if obj.api_datum_type == "dir" {
-            let dir_name = dir.join(obj.name);
-            fs::create_dir(&dir_name)?;
-            get_dir(obj.links.links_self, &client, dir_name.as_path()).await?;
-        } else {
-            let mut file = File::create(dir.join(obj.name))?;
-            let file_content = get_filedata(obj.download_url.unwrap()).await?;
-            file.write_all(file_content.as_bytes())?;
+    if res.starts_with("{") {
+        let data: ApiDatum = serde_json::from_str(&res)?;
+
+        let file_content = get_filedata(data.download_url.unwrap()).await?;
+        let mut file = File::create(dir.join(data.name))?;
+        file.write_all(file_content.as_bytes())?;
+    } else {
+        let res_data: ApiData = serde_json::from_str(&res)?;
+
+        for obj in res_data {
+            if obj.api_datum_type == "dir" {
+                let dir_name = dir.join(obj.name);
+                fs::create_dir(&dir_name)?;
+                get_dir(obj.links.links_self, &client, dir_name.as_path()).await?;
+            } else {
+                let mut file = File::create(dir.join(obj.name))?;
+                let download_url = obj.download_url.unwrap();
+                println!("{}", download_url);
+                let file_content = get_filedata(download_url).await?;
+                file.write_all(file_content.as_bytes())?;
+            }
         }
     }
 

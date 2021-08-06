@@ -1,4 +1,5 @@
 use clap::{load_yaml, App};
+use colored::Colorize;
 use std::process;
 
 mod utils;
@@ -13,7 +14,7 @@ async fn main() {
     let path = match utils::parser::parse_url(url.unwrap()) {
         Ok(path) => path,
         Err(err) => {
-            println!("{}", err.to_string());
+            println!("{}", err.to_string().red());
             process::exit(0);
         }
     };
@@ -21,13 +22,13 @@ async fn main() {
     let data = match utils::parser::parse_path(&path) {
         Ok(data) => data,
         Err(err) => {
-            println!("{}", err);
+            println!("{}", err.to_string().red());
             process::exit(0)
         }
     };
 
     match utils::parser::fetch_data(data).await {
-        Err(err) => println!("{}", err.to_string()),
+        Err(err) => println!("{}", err.to_string().red()),
         Ok(_) => (),
     };
 }
