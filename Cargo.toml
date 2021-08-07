@@ -2,7 +2,8 @@
 name = "cloneit"
 version = "0.1.0"
 edition = "2018"
-
+authors = ["Alok <alok8bb@gmail.com>"]
+description = "A commandline tool to download specific GitHub directories or files"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

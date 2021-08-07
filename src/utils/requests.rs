@@ -6,10 +6,10 @@ use std::path::Path;
 use std::{error::Error, fs};
 use tokio::io::AsyncWriteExt;
 
-pub type ApiData = Vec<ApiDatum>;
+pub type ApiData = Vec<ApiOjbect>;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ApiDatum {
+pub struct ApiOjbect {
     name: String,
     path: String,
     sha: String,
@@ -34,7 +34,7 @@ pub struct Links {
 
 #[async_recursion]
 pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box<dyn Error>> {
-    let res = client
+    let res: String = client
         .get(url)
         .header("User-Agent", "request")
         .send()
@@ -42,14 +42,15 @@ pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box
         .text()
         .await?;
 
+    // Check if single file was given (download directly)
     if res.starts_with("{") {
-        let data: ApiDatum = serde_json::from_str(&res)?;
+        let ojb: ApiOjbect = serde_json::from_str(&res)?;
 
-        get_filedata(data.download_url.unwrap(), client, data.name, dir).await?;
+        get_filedata(ojb.download_url.unwrap(), client, ojb.name, dir).await?;
     } else {
-        let res_data: ApiData = serde_json::from_str(&res)?;
+        let api_data: ApiData = serde_json::from_str(&res)?;
 
-        for obj in res_data {
+        for obj in api_data {
             if obj.api_datum_type == "dir" {
                 let dir_name = dir.join(obj.name);
                 fs::create_dir(&dir_name)?;
@@ -67,19 +68,18 @@ pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box
 pub async fn get_filedata(
     url: String,
     client: &Client,
-    file_name: String,
+    filename: String,
     dir: &Path,
 ) -> Result<(), Box<dyn Error>> {
     let download_size = {
         let resp = client.head(url.as_str()).send().await?;
         if resp.status().is_success() {
-            resp.headers() // Gives is the HeaderMap
-                .get(header::CONTENT_LENGTH) // Gives us an Option containing the HeaderValue
-                .and_then(|ct_len| ct_len.to_str().ok()) // Unwraps the Option as &str
-                .and_then(|ct_len| ct_len.parse().ok()) // Parses the Option as u64
-                .unwrap_or(0) // Fallback to 0
+            resp.headers()
+                .get(header::CONTENT_LENGTH)
+                .and_then(|ct_len| ct_len.to_str().ok())
+                .and_then(|ct_len| ct_len.parse().ok())
+                .unwrap_or(0)
         } else {
-            // We return an Error if something goes wrong here
             return Err(
                 format!("Couldn't download URL: {}. Error: {:?}", url, resp.status(),).into(),
             );
@@ -91,21 +91,21 @@ pub async fn get_filedata(
 
     progress_bar.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:60.cyan/blue}] {bytes}/{total_bytes} - {wide_msg}")
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:60.cyan/blue}] {bytes}/{total_bytes} {msg}")
             .progress_chars("- C * "),
     );
-    progress_bar.set_message(file_name.clone());
+    progress_bar.set_message(filename.clone());
 
-    let mut outfile = tokio::fs::File::create(dir.join(file_name.clone())).await?;
+    let mut outfile = tokio::fs::File::create(dir.join(filename.clone())).await?;
 
     let mut download = req.send().await?;
     while let Some(chunk) = download.chunk().await? {
-        progress_bar.inc(chunk.len() as u64); // Increase ProgressBar by chunk size
+        progress_bar.inc(chunk.len() as u64); // Increase Progressbar
 
-        outfile.write(&chunk).await?; // Write chunk to output file
+        outfile.write(&chunk).await?;
     }
 
-    progress_bar.finish_with_message(file_name);
+    progress_bar.finish_with_message(filename);
 
     Ok(())
 }

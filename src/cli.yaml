@@ -1,7 +1,7 @@
-name: cit
+name: cloneit
 version: "1.0"
 author: Alok P <alok8bb@gmail.com>
-about: Clone specific GitHub directories
+about: Download specific GitHub directories or files
 args:
     - URL:
           about: URL to the GitHub directory
@@ -10,7 +10,7 @@ args:
     - zip:
           short: z
           multiple: false
-          about: Clone zipped directory
+          about: Download zipped directory
     - link:
           short: l
           multiple: false

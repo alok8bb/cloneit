@@ -15,7 +15,7 @@ async fn main() {
 
     println!(
         "{} {}Validating url...",
-        style("[1/2]").bold().dim(),
+        style("[1/3]").bold().dim(),
         output::LOOKING_GLASS
     );
     let path = match utils::parser::parse_url(url.unwrap()) {
@@ -36,14 +36,14 @@ async fn main() {
 
     println!(
         "{} {}Downloading...",
-        style("[2/2]").bold().dim(),
+        style("[2/3]").bold().dim(),
         output::TRUCK
     );
 
     match utils::parser::fetch_data(data).await {
         Err(err) => println!("{}", err.to_string().red()),
         Ok(_) => println!(
-            "{} {}Cloned Successfully.",
+            "{} {}Downloaded Successfully.",
             style("[3/3]").bold().dim(),
             output::SPARKLES
         ),

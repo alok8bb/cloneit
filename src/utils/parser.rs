@@ -76,10 +76,7 @@ pub async fn fetch_data(data: Directory) -> Result<(), Box<dyn Error>> {
     let path = format!("./{}", data.root);
     fs::create_dir(&path)?;
 
-    match requests::get_dir(url, &client, Path::new(&path)).await {
-        Err(err) => println!("{}", err.to_string()),
-        Ok(_) => (),
-    };
+    requests::get_dir(url, &client, Path::new(&path)).await?;
 
     Ok(())
 }
