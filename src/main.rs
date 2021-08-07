@@ -3,8 +3,9 @@ use colored::Colorize;
 use console::style;
 use std::process;
 
-mod output;
-mod utils;
+pub mod output;
+pub mod parser;
+pub mod requests;
 
 #[tokio::main]
 async fn main() {
@@ -18,18 +19,18 @@ async fn main() {
         style("[1/3]").bold().dim(),
         output::LOOKING_GLASS
     );
-    let path = match utils::parser::parse_url(url.unwrap()) {
+    let path = match parser::parse_url(url.unwrap()) {
         Ok(path) => path,
         Err(err) => {
-            println!("{}", err.to_string().red());
+            eprintln!("{}", err.to_string().red());
             process::exit(0);
         }
     };
 
-    let data = match utils::parser::parse_path(&path) {
+    let data = match parser::parse_path(&path) {
         Ok(data) => data,
         Err(err) => {
-            println!("{}", err.to_string().red());
+            eprintln!("{}", err.to_string().red());
             process::exit(0);
         }
     };
@@ -40,8 +41,8 @@ async fn main() {
         output::TRUCK
     );
 
-    match utils::parser::fetch_data(data).await {
-        Err(err) => println!("{}", err.to_string().red()),
+    match requests::fetch_data(data).await {
+        Err(err) => eprintln!("{}", err.to_string().red()),
         Ok(_) => println!(
             "{} {}Downloaded Successfully.",
             style("[3/3]").bold().dim(),

@@ -6,6 +6,8 @@ use std::path::Path;
 use std::{error::Error, fs};
 use tokio::io::AsyncWriteExt;
 
+use crate::parser::Directory;
+
 pub type ApiData = Vec<ApiOjbect>;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -30,6 +32,28 @@ pub struct Links {
     links_self: String,
     git: String,
     html: String,
+}
+
+pub async fn fetch_data(data: Directory) -> Result<(), Box<dyn Error>> {
+    let url = if data.path == "" {
+        format!(
+            "https://api.github.com/repos/{}/{}/contents/",
+            data.username, data.repository
+        )
+    } else {
+        format!(
+            "https://api.github.com/repos/{}/{}/contents{}?ref={}",
+            data.username, data.repository, data.path, data.branch
+        )
+    };
+
+    let client = reqwest::Client::new();
+    let path = format!("./{}", data.root);
+    fs::create_dir(&path)?;
+
+    crate::requests::get_dir(url, &client, Path::new(&path)).await?;
+
+    Ok(())
 }
 
 #[async_recursion]
@@ -98,8 +122,11 @@ pub async fn get_filedata(
 
     let mut outfile = tokio::fs::File::create(dir.join(filename.clone())).await?;
 
-    let mut download = req.send().await?;
-    while let Some(chunk) = download.chunk().await? {
+    let mut resp = req.send().await?;
+    if !resp.status().is_success() {
+        return Err(format!("Couldn't download URL. Error: {:?}", resp.status(),).into());
+    }
+    while let Some(chunk) = resp.chunk().await? {
         progress_bar.inc(chunk.len() as u64); // Increase Progressbar
 
         outfile.write(&chunk).await?;

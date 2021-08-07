@@ -1,16 +1,13 @@
-use crate::utils::requests;
 use std::error::Error;
-use std::fs;
-use std::path::Path;
 use url::Url;
 
 #[derive(Debug)]
 pub struct Directory {
-    root: String,
-    branch: String,
-    path: String,
-    username: String,
-    repository: String,
+    pub root: String,
+    pub branch: String,
+    pub path: String,
+    pub username: String,
+    pub repository: String,
 }
 
 pub fn parse_url(url: &str) -> Result<String, Box<dyn Error>> {
@@ -57,26 +54,4 @@ pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
     };
 
     Ok(data)
-}
-
-pub async fn fetch_data(data: Directory) -> Result<(), Box<dyn Error>> {
-    let url = if data.path == "" {
-        format!(
-            "https://api.github.com/repos/{}/{}/contents/",
-            data.username, data.repository
-        )
-    } else {
-        format!(
-            "https://api.github.com/repos/{}/{}/contents{}?ref={}",
-            data.username, data.repository, data.path, data.branch
-        )
-    };
-
-    let client = reqwest::Client::new();
-    let path = format!("./{}", data.root);
-    fs::create_dir(&path)?;
-
-    requests::get_dir(url, &client, Path::new(&path)).await?;
-
-    Ok(())
 }
