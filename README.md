@@ -9,7 +9,7 @@ A cli tool to download specific GitHub directories or files.
 ```bash
 git clone https://github.com/alok8bb/cloneit
 cd cloneit
-cargo install build --release
+cargo build --release
 ```
 
 # Usage
