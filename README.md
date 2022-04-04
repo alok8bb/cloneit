@@ -9,7 +9,7 @@ A cli tool to download specific GitHub directories or files.
 ```bash
 git clone https://github.com/alok8bb/cloneit
 cd cloneit
-cargo build --release
+bash ./install.sh
 ```
 
 # Usage
@@ -34,7 +34,7 @@ FLAGS:
 
 # Examples
 
-### Downloading
+### Downloading a specific folder
 
 ```bash
 $ cloneit https://github.com/alok8bb/cloneit
@@ -44,11 +44,13 @@ $ cloneit https://github.com/alok8bb/cloneit
 $ cloneit https://github.com/alok8bb/cloneit/tree/master/src
 ```
 
+### Downloading a specific file
+
 ```bash
 $ cloneit https://github.com/alok8bb/cloneit/tree/master/src/main.rs
 ```
 
-### Zipped File - WIP
+### Downloading a zip file - WIP
 
 ```bash
 $ cloneit -z https://github.com/alok8bb/cloneit

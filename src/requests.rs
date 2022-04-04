@@ -2,8 +2,7 @@ use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
-use std::{error::Error, fs};
+use std::{path::Path, error::Error, fs};
 use tokio::io::AsyncWriteExt;
 
 use crate::parser::Directory;

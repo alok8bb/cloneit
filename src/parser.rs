@@ -11,8 +11,7 @@ pub struct Directory {
 }
 
 pub fn parse_url(url: &str) -> Result<String, Box<dyn Error>> {
-    let parsed_url = Url::parse(url);
-    let parsed_url = match parsed_url {
+    let parsed_url = match Url::parse(url) {
         Ok(url) => url,
         Err(_) => return Err("Error parsing URL".into()),
     };
@@ -33,23 +32,23 @@ pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
     let data = Directory {
         username: patterns[1].to_string(),
         repository: patterns[2].to_string(),
-        branch: if patterns.get(4) != None {
-            patterns[4].to_string()
-        } else {
+        branch: if patterns.get(4) == None {
             "".to_string()
-        },
-        root: if patterns.last() != None {
-            patterns.last().unwrap().to_string()
         } else {
-            patterns[2].to_string()
+            patterns[4].to_string()
         },
-        path: if patterns.get(5) != None {
+        root: if patterns.last() == None {
+            patterns[2].to_string()
+        } else {
+            patterns.last().unwrap().to_string()
+        },
+        path: if patterns.get(5) == None {
+            "".to_string()
+        } else {
             patterns[5..]
                 .into_iter()
                 .map(|i| format!("/{}", i))
                 .collect::<String>()
-        } else {
-            "".to_string()
         },
     };
 
