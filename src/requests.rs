@@ -2,7 +2,7 @@ use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
-use std::{path::Path, error::Error, fs};
+use std::{error::Error, fs, path::Path};
 use tokio::io::AsyncWriteExt;
 
 use crate::parser::Directory;
@@ -33,8 +33,8 @@ pub struct Links {
     html: String,
 }
 
-pub async fn fetch_data(data: Directory) -> Result<(), Box<dyn Error>> {
-    let url = if data.path == "" {
+pub async fn fetch_data(data: &Directory) -> Result<(), Box<dyn Error>> {
+    let url = if data.path.is_empty() {
         format!(
             "https://api.github.com/repos/{}/{}/contents/",
             data.username, data.repository
@@ -50,13 +50,14 @@ pub async fn fetch_data(data: Directory) -> Result<(), Box<dyn Error>> {
     let path = format!("./{}", data.root);
     fs::create_dir(&path)?;
 
-    crate::requests::get_dir(url, &client, Path::new(&path)).await?;
+    crate::requests::get_dir(&url, &client, Path::new(&path)).await?;
 
     Ok(())
 }
 
 #[async_recursion]
-pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box<dyn Error>> {
+#[must_use]
+pub async fn get_dir(url: &str, client: &Client, dir: &Path) -> Result<(), Box<dyn Error>> {
     let res: String = client
         .get(url)
         .header("User-Agent", "request")
@@ -66,7 +67,7 @@ pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box
         .await?;
 
     // Check if single file was given (download directly)
-    if res.starts_with("{") {
+    if res.starts_with('{') {
         let ojb: ApiOjbect = serde_json::from_str(&res)?;
 
         get_filedata(ojb.download_url.unwrap(), client, ojb.name, dir).await?;
@@ -77,7 +78,7 @@ pub async fn get_dir(url: String, client: &Client, dir: &Path) -> Result<(), Box
             if obj.api_datum_type == "dir" {
                 let dir_name = dir.join(obj.name);
                 fs::create_dir(&dir_name)?;
-                get_dir(obj.links.links_self, &client, dir_name.as_path()).await?;
+                get_dir(&obj.links.links_self, client, dir_name.as_path()).await?;
             } else {
                 let download_url = obj.download_url.unwrap();
                 get_filedata(download_url, client, obj.name, dir).await?;
@@ -125,6 +126,7 @@ pub async fn get_filedata(
     if !resp.status().is_success() {
         return Err(format!("Couldn't download URL. Error: {:?}", resp.status(),).into());
     }
+
     while let Some(chunk) = resp.chunk().await? {
         progress_bar.inc(chunk.len() as u64); // Increase Progressbar
 
