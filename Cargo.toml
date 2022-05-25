@@ -1,6 +1,6 @@
 [package]
 name = "cloneit"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2018"
 authors = ["Alok <alok8bb@gmail.com>"]
 description = "A commandline tool to download specific GitHub directories or files"
@@ -9,9 +9,10 @@ description = "A commandline tool to download specific GitHub directories or fil
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary for a "smaller" size.
+lto = true
 
 [dependencies]
-clap = { version = "3.0.0-beta.2", features = ["yaml"] }
+clap = { version = "3" }
 url = "2.2.2"
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
@@ -21,3 +22,5 @@ async-recursion = "0.3.2"
 colored = "2"
 indicatif = "0.16.2"
 console = "0.14.1"
+zip = "0.6" # for file-zipping related things
+walkdir = "2"

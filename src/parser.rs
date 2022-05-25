@@ -40,13 +40,13 @@ pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
         root: if patterns.last() == None {
             patterns[2].to_string()
         } else {
-            patterns.last().unwrap().to_string()
+            (*patterns.last().unwrap()).to_string()
         },
         path: if patterns.get(5) == None {
             "".to_string()
         } else {
             patterns[5..]
-                .into_iter()
+                .iter()
                 .map(|i| format!("/{}", i))
                 .collect::<String>()
         },
