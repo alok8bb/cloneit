@@ -13,7 +13,7 @@ pub struct Directory {
 pub fn parse_url(url: &str) -> Result<String, Box<dyn Error>> {
     let parsed_url = match Url::parse(url) {
         Ok(url) => url,
-        Err(_) => return Err("Error parsing URL".into()),
+        Err(err) => return Err(format!("Invalid URL: {}", err.to_string()).into()),
     };
 
     Ok(parsed_url.path().to_string())

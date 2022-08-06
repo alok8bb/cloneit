@@ -7,10 +7,10 @@ use tokio::io::AsyncWriteExt;
 
 use crate::parser::Directory;
 
-pub type ApiData = Vec<ApiOjbect>;
+pub type ApiData = Vec<ApiObject>;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ApiOjbect {
+pub struct ApiObject {
     name: String,
     path: String,
     sha: String,
@@ -46,17 +46,16 @@ pub async fn fetch_data(data: &Directory) -> Result<(), Box<dyn Error>> {
         )
     };
 
-    let client = reqwest::Client::new();
+    let client = Client::new();
     let path = format!("./{}", data.root);
     fs::create_dir(&path)?;
 
-    crate::requests::get_dir(&url, &client, Path::new(&path)).await?;
+    get_dir(&url, &client, Path::new(&path)).await?;
 
     Ok(())
 }
 
 #[async_recursion]
-#[must_use]
 pub async fn get_dir(url: &str, client: &Client, dir: &Path) -> Result<(), Box<dyn Error>> {
     let res: String = client
         .get(url)
@@ -68,9 +67,9 @@ pub async fn get_dir(url: &str, client: &Client, dir: &Path) -> Result<(), Box<d
 
     // Check if single file was given (download directly)
     if res.starts_with('{') {
-        let ojb: ApiOjbect = serde_json::from_str(&res)?;
+        let ojb: ApiObject = serde_json::from_str(&res)?;
 
-        get_filedata(ojb.download_url.unwrap(), client, ojb.name, dir).await?;
+        get_file_data(ojb.download_url.unwrap(), client, ojb.name, dir).await?;
     } else {
         let api_data: ApiData = serde_json::from_str(&res)?;
 
@@ -81,7 +80,7 @@ pub async fn get_dir(url: &str, client: &Client, dir: &Path) -> Result<(), Box<d
                 get_dir(&obj.links.links_self, client, dir_name.as_path()).await?;
             } else {
                 let download_url = obj.download_url.unwrap();
-                get_filedata(download_url, client, obj.name, dir).await?;
+                get_file_data(download_url, client, obj.name, dir).await?;
             }
         }
     }
@@ -89,7 +88,7 @@ pub async fn get_dir(url: &str, client: &Client, dir: &Path) -> Result<(), Box<d
     Ok(())
 }
 
-pub async fn get_filedata(
+pub async fn get_file_data(
     url: String,
     client: &Client,
     filename: String,

@@ -1,4 +1,4 @@
-#![warn(clippy::pedantic, clippy::all)]
+#![warn(clippy::all)]
 use colored::Colorize;
 use console::style;
 use std::process;
@@ -14,8 +14,7 @@ use crate::file_archiver::ZipArchiver;
 
 #[tokio::main]
 async fn main() {
-    let arg_vec_handle = create_args_parser();
-    let matches = arg_vec_handle.get_matches();
+    let matches = create_args_parser().get_matches();
 
     let urls = matches.values_of("url").unwrap().collect::<Vec<&str>>();
     for url in &urls {
