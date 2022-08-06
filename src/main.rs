@@ -1,6 +1,6 @@
 #![warn(clippy::all)]
-use colored::Colorize;
-use console::style;
+use crossterm::style::Stylize;
+use std::io::Error;
 use std::process;
 
 pub mod arg_parser;
@@ -13,19 +13,15 @@ use crate::arg_parser::create_args_parser;
 use crate::file_archiver::ZipArchiver;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Error> {
     let matches = create_args_parser().get_matches();
 
     let urls = matches.values_of("url").unwrap().collect::<Vec<&str>>();
     for url in &urls {
-        println!(
-            "
-            Getting: {:?}",
-            url
-        );
+        println!("Getting: {:?}", url);
         println!(
             "{} {}Validating url...",
-            style("[1/3]").bold().dim(),
+            "[1/3]".bold().dim(),
             output::LOOKING_GLASS
         );
 
@@ -45,17 +41,13 @@ async fn main() {
             }
         };
 
-        println!(
-            "{} {}Downloading...",
-            style("[2/3]").bold().dim(),
-            output::TRUCK
-        );
+        println!("{} {}Downloading...", "[2/3]".bold().dim(), output::TRUCK);
 
         match requests::fetch_data(&data).await {
             Err(err) => eprintln!("{}", err.to_string().red()),
             Ok(_) => println!(
                 "{} {}Downloaded Successfully.",
-                style("[3/3]").bold().dim(),
+                "[3/3]".bold().dim(),
                 output::SPARKLES
             ),
         };
@@ -72,4 +64,6 @@ async fn main() {
         [+] Downloaded {:?} file(s).",
         &urls.len()
     );
+
+    Ok(())
 }

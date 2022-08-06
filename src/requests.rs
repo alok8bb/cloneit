@@ -1,4 +1,5 @@
 use async_recursion::async_recursion;
+use base64::decode;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
@@ -16,11 +17,10 @@ pub struct ApiObject {
     sha: String,
     size: i64,
     url: String,
-    html_url: String,
-    git_url: String,
+    content: Option<String>,
     download_url: Option<String>,
     #[serde(rename = "type")]
-    api_datum_type: String,
+    object_type: String, // dir or file
     #[serde(rename = "_links")]
     links: Links,
 }
@@ -64,27 +64,51 @@ pub async fn get_dir(url: &str, client: &Client, dir: &Path) -> Result<(), Box<d
         .await?
         .text()
         .await?;
+    // `TODO: add check for response codes (200, 403, 404)
 
-    // Check if single file was given (download directly)
     if res.starts_with('{') {
-        let ojb: ApiObject = serde_json::from_str(&res)?;
-
-        get_file_data(ojb.download_url.unwrap(), client, ojb.name, dir).await?;
+        let obj: ApiObject = serde_json::from_str(&res)?;
+        println!("{:#?}", obj);
+        match obj.content {
+            Some(content) => {
+                if content.is_empty() {
+                    get_file_data(obj.download_url.unwrap(), client, obj.name, dir).await?
+                } else {
+                    write_data(content, dir, obj.name).await?
+                }
+            }
+            None => (),
+        };
     } else {
         let api_data: ApiData = serde_json::from_str(&res)?;
 
         for obj in api_data {
-            if obj.api_datum_type == "dir" {
+            if obj.object_type == "dir" {
                 let dir_name = dir.join(obj.name);
                 fs::create_dir(&dir_name)?;
                 get_dir(&obj.links.links_self, client, dir_name.as_path()).await?;
             } else {
+                // FIXME: check if content is empty or not
                 let download_url = obj.download_url.unwrap();
-                get_file_data(download_url, client, obj.name, dir).await?;
+                get_file_data(download_url, client, obj.name, dir).await?
             }
         }
     }
 
+    Ok(())
+}
+
+async fn write_data(content: String, dir: &Path, filename: String) -> Result<(), Box<dyn Error>> {
+    let content = content
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>();
+
+    let content_str = decode(content).unwrap();
+    tokio::fs::File::create(dir.join(filename))
+        .await?
+        .write_all(&content_str[..])
+        .await?;
     Ok(())
 }
 
@@ -95,7 +119,7 @@ pub async fn get_file_data(
     dir: &Path,
 ) -> Result<(), Box<dyn Error>> {
     let download_size = {
-        let resp = client.head(url.as_str()).send().await?;
+        let resp = client.get(url.as_str()).send().await?;
         if resp.status().is_success() {
             resp.headers()
                 .get(header::CONTENT_LENGTH)

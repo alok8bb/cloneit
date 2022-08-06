@@ -1,5 +1,3 @@
-use console::Emoji;
-
-pub const LOOKING_GLASS: Emoji<'_, '_> = Emoji("🔍  ", "");
-pub const TRUCK: Emoji<'_, '_> = Emoji("🚚  ", "");
-pub const SPARKLES: Emoji<'_, '_> = Emoji("✨ ", "");
+pub const LOOKING_GLASS: char = '\u{1F50D}';
+pub const TRUCK: char = '\u{1F69A}';
+pub const SPARKLES: char = '\u{2728}';
