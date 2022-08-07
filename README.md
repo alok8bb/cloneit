@@ -14,27 +14,35 @@ bash ./install.sh
 
 # Usage
 
-```
-cloneit 1.0
+```bash
+cloneit 1.0.0
 Alok P <alok8bb@gmail.com>
 Download specific GitHub directories or files
 
 USAGE:
-    cloneit [FLAGS] <URL>
+    cloneit [OPTIONS] <url>...
 
 ARGS:
-    <URL>    URL to the GitHub directory
+    <url>...
+            URL to the GitHub directory or file. You can pass a single URL or multiple
+            comma-delimited URLs e.g.
 
-FLAGS:
-    -h, --help       Prints help information
-    -l               Generate download link to zipped file
-    -V, --version    Prints version information
-    -z               Download zipped directory
+            https://github.com/fpic/linpeace.py,https://github.com/s0xf/r2gihdra.c,https://github.com/fpic/defpol/master
+
+OPTIONS:
+    -h, --help
+            Print help information
+
+    -V, --version
+            Print version information
+
+    -z
+            Download zipped directory
 ```
 
 # Examples
 
-### Downloading a specific folder
+### Download a specific folder
 
 ```bash
 $ cloneit https://github.com/alok8bb/cloneit
@@ -44,21 +52,16 @@ $ cloneit https://github.com/alok8bb/cloneit
 $ cloneit https://github.com/alok8bb/cloneit/tree/master/src
 ```
 
-### Downloading a specific file
+### Download a file
 
 ```bash
 $ cloneit https://github.com/alok8bb/cloneit/tree/master/src/main.rs
 ```
 
-### Downloading a zip file - WIP
+### Downloading and zip the folder/file
+
+Thanks to [@winterrdog](https://github.com/winterrdog) for implementing this feature.
 
 ```bash
 $ cloneit -z https://github.com/alok8bb/cloneit
 ```
-
-# Todo
-
--   [ ] Downloading zipped directories
--   [ ] Uploading File
--   [ ] Advanced Error Handling
--   [ ] Code Refactoring

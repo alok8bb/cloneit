@@ -19,10 +19,6 @@ pub fn create_args_parser<'a>() -> Command<'a> {
             Arg::new("zip")
                 .short('z')
                 .multiple_occurrences(false)
-                .help("Download zipped directory"),
-            Arg::new("link")
-                .short('l')
-                .multiple_occurrences(false)
-                .help("Generate download link to zipped file"),
+                .help("Download zipped directory")
         ])
 }

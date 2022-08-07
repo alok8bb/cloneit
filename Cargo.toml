@@ -19,8 +19,6 @@ tokio = { version = "1", features = ["full"] }
 serde_json = "1"
 serde =  { version = "1.0.127", features = ["derive"]}
 async-recursion = "0.3.2"
-colored = "2"
-indicatif = "0.16.2"
 zip = "0.6" # for file-zipping related things
 walkdir = "2"
 crossterm = "0.24.0"
