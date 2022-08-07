@@ -61,7 +61,7 @@ async fn main() -> Result<(), Error> {
 
     println!(
         "
-        [+] Downloaded {:?} file(s).",
+        [+] Downloaded {:?} dir(s).",
         &urls.len()
     );
 
