@@ -44,7 +44,10 @@ async fn main() -> Result<(), Error> {
         println!("{} {}Downloading...", "[2/3]".bold().dim(), output::TRUCK);
 
         match requests::fetch_data(&data).await {
-            Err(err) => eprintln!("{}", err.to_string().red()),
+            Err(err) => {
+                eprintln!("{}", err.to_string().red());
+                process::exit(0);
+            }
             Ok(_) => println!(
                 "{} {}Downloaded Successfully.",
                 "[3/3]".bold().dim(),

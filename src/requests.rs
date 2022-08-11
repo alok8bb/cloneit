@@ -65,7 +65,10 @@ async fn build_request(url: &str, client: &Client) -> Result<ApiResponse, Box<dy
         .text()
         .await?;
 
-    Ok(serde_json::from_str(&res)?)
+    match serde_json::from_str(&res) {
+        Ok(val) => Ok(val),
+        Err(_) => Err(format!("Error parsing api object, check the provided url").into()),
+    }
 }
 
 async fn download(url: &str, project_root: &str) -> Result<(), Box<dyn Error>> {
@@ -76,7 +79,7 @@ async fn download(url: &str, project_root: &str) -> Result<(), Box<dyn Error>> {
 
     match response {
         ApiResponse::Object(object) => {
-            // This object is always a always since there can't be any empty directories on GH
+            // single object is always a file
             write_file(object, &path, &client).await?;
         }
 
@@ -135,16 +138,18 @@ async fn write_file(
                 .await?;
         }
         None => {
-            let resp = client
-                .get(&obj.download_url.unwrap())
-                .send()
-                .await?
-                .text()
-                .await?;
-            tokio::fs::File::create(root_path.join(obj.name))
-                .await?
-                .write_all(resp.as_bytes())
-                .await?;
+            let mut outfile = tokio::fs::File::create(root_path.join(obj.name)).await?;
+
+            let mut res = client.get(&obj.download_url.unwrap()).send().await?;
+            if !res.status().is_success() {
+                return Err(
+                    format!("Couldn't download file from URL\nError: {}", res.status()).into(),
+                );
+            }
+
+            while let Some(chunk) = res.chunk().await? {
+                outfile.write(&chunk).await?;
+            }
         }
     }
 
