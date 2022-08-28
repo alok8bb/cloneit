@@ -21,5 +21,4 @@ serde =  { version = "1.0.127", features = ["derive"]}
 async-recursion = "0.3.2"
 zip = "0.6" # for file-zipping related things
 walkdir = "2"
-crossterm = "0.24.0"
-base64 = "0.13.0"
+kdam = "0.2.3"

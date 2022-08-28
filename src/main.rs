@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use crossterm::style::Stylize;
+use kdam::term::Colorizer;
 use std::io::Error;
 use std::process;
 
@@ -21,14 +21,14 @@ async fn main() -> Result<(), Error> {
         println!("Getting: {:?}", url);
         println!(
             "{} {}Validating url...",
-            "[1/3]".bold().dim(),
+            "[1/3]".colorize("bold yellow"),
             output::LOOKING_GLASS
         );
 
         let path = match parser::parse_url(url) {
             Ok(path) => path,
             Err(err) => {
-                eprintln!("{}", err.to_string().red());
+                eprintln!("{}", err.to_string().colorize("red"));
                 process::exit(0);
             }
         };
@@ -36,21 +36,25 @@ async fn main() -> Result<(), Error> {
         let data = match parser::parse_path(&path) {
             Ok(data) => data,
             Err(err) => {
-                eprintln!("{}", err.to_string().red());
+                eprintln!("{}", err.to_string().colorize("red"));
                 process::exit(0);
             }
         };
 
-        println!("{} {}Downloading...", "[2/3]".bold().dim(), output::TRUCK);
+        println!(
+            "{} {}Downloading...",
+            "[2/3]".colorize("bold yellow"),
+            output::TRUCK
+        );
 
         match requests::fetch_data(&data).await {
             Err(err) => {
-                eprintln!("{}", err.to_string().red());
+                eprintln!("{}", err.to_string().colorize("red"));
                 process::exit(0);
             }
             Ok(_) => println!(
                 "{} {}Downloaded Successfully.",
-                "[3/3]".bold().dim(),
+                "[3/3]".colorize("bold yellow"),
                 output::SPARKLES
             ),
         };
