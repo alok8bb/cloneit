@@ -2,6 +2,7 @@
 use kdam::term::Colorizer;
 use std::io::Error;
 use std::process;
+use zip::result::ZipError;
 
 pub mod arg_parser;
 pub mod file_archiver;
@@ -17,6 +18,7 @@ async fn main() -> Result<(), Error> {
     let matches = create_args_parser().get_matches();
 
     let urls = matches.values_of("url").unwrap().collect::<Vec<&str>>();
+    println!("{:#?}", urls);
     for url in &urls {
         println!("Getting: {:?}", url);
         println!(
@@ -62,7 +64,16 @@ async fn main() -> Result<(), Error> {
         if matches.is_present("zip") {
             let dst_zip = format!("{}.zip", &data.root);
             let zipper = ZipArchiver::new(&data.root, &dst_zip);
-            zipper.run().unwrap();
+            match zipper.run() {
+                Ok(_) => (),
+                Err(ZipError::FileNotFound) => {
+                    eprintln!(
+                        "{}",
+                        "\ncould not zip the downloaded file".colorize("bold red")
+                    )
+                }
+                Err(e) => eprintln!("{}", e.to_string().colorize("bold red")),
+            }
         }
     }
 
