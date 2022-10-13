@@ -4,22 +4,23 @@ use std::io::Error;
 use std::process;
 use zip::result::ZipError;
 
-pub mod arg_parser;
+pub mod args;
 pub mod file_archiver;
 pub mod output;
 pub mod parser;
 pub mod requests;
 
-use crate::arg_parser::create_args_parser;
+use crate::args::CommandArgs;
 use crate::file_archiver::ZipArchiver;
+use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let matches = create_args_parser().get_matches();
+    let args = CommandArgs::parse();
 
-    let urls = matches.values_of("url").unwrap().collect::<Vec<&str>>();
-    println!("{:#?}", urls);
-    for url in &urls {
+    // println!("{}", args.path);
+
+    for url in &args.urls {
         println!("Getting: {:?}", url);
         println!(
             "{} {}Validating url...",
@@ -61,7 +62,7 @@ async fn main() -> Result<(), Error> {
             ),
         };
 
-        if matches.is_present("zip") {
+        if args.zipped {
             let dst_zip = format!("{}.zip", &data.root);
             let zipper = ZipArchiver::new(&data.root, &dst_zip);
             match zipper.run() {
@@ -80,7 +81,7 @@ async fn main() -> Result<(), Error> {
     println!(
         "
         [+] Downloaded {:?} dir(s).",
-        &urls.len()
+        &args.urls.len()
     );
 
     Ok(())
