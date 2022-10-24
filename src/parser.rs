@@ -8,6 +8,7 @@ pub struct Directory {
     pub path: String,
     pub username: String,
     pub repository: String,
+    pub clone_path: Option<String>,
 }
 
 pub fn parse_url(url: &str) -> Result<String, Box<dyn Error>> {
@@ -19,7 +20,7 @@ pub fn parse_url(url: &str) -> Result<String, Box<dyn Error>> {
     Ok(parsed_url.path().to_string())
 }
 
-pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
+pub fn parse_path(path: &str, clone_path: Option<String>) -> Result<Directory, Box<dyn Error>> {
     let mut patterns: Vec<&str> = path.split('/').collect();
     if patterns.last().unwrap() == &"" {
         patterns.pop();
@@ -50,6 +51,7 @@ pub fn parse_path(path: &str) -> Result<Directory, Box<dyn Error>> {
                 .map(|i| format!("/{}", i))
                 .collect::<String>()
         },
+        clone_path,
     };
 
     Ok(data)

@@ -22,8 +22,8 @@ pub struct CommandArgs {
     )]
     pub urls: Vec<String>,
 
-    #[arg(default_value = ".")]
-    pub path: String,
+    #[arg()]
+    pub path: Option<String>,
 
     #[arg(short = 'z', long = "zip", help = "download and zip directory")]
     pub zipped: bool,

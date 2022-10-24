@@ -18,8 +18,6 @@ use clap::Parser;
 async fn main() -> Result<(), Error> {
     let args = CommandArgs::parse();
 
-    // println!("{}", args.path);
-
     for url in &args.urls {
         println!("Getting: {:?}", url);
         println!(
@@ -36,7 +34,7 @@ async fn main() -> Result<(), Error> {
             }
         };
 
-        let data = match parser::parse_path(&path) {
+        let data = match parser::parse_path(&path, args.path.clone()) {
             Ok(data) => data,
             Err(err) => {
                 eprintln!("{}", err.to_string().colorize("red"));

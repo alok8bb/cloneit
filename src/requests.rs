@@ -13,6 +13,12 @@ pub type ApiData = Vec<ApiObject>;
 enum ApiResponse {
     Object(ApiObject),
     Array(ApiData),
+    Message(ApiMessage),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ApiMessage {
+    message: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -48,7 +54,7 @@ pub async fn fetch_data(data: &Directory) -> Result<(), Box<dyn Error>> {
         )
     };
 
-    download(&url, &data.root).await?;
+    download(&url, &data.root, &data.clone_path).await?;
 
     Ok(())
 }
@@ -63,12 +69,22 @@ async fn build_request(url: &str, client: &Client) -> Result<ApiResponse, Box<dy
         .await?;
 
     match serde_json::from_str(&res) {
-        Ok(val) => Ok(val),
+        Ok(val) => {
+            match val {
+                ApiResponse::Message(msg_object) => return Err(msg_object.message.into()),
+                _ => (),
+            }
+            Ok(val)
+        }
         Err(_) => Err(format!("Error parsing api object, check the provided url").into()),
     }
 }
 
-async fn download(url: &str, project_root: &str) -> Result<(), Box<dyn Error>> {
+async fn download(
+    url: &str,
+    project_root: &str,
+    clone_path: &Option<String>,
+) -> Result<(), Box<dyn Error>> {
     let client = Client::new();
     let path = Path::new("./");
 
@@ -77,18 +93,48 @@ async fn download(url: &str, project_root: &str) -> Result<(), Box<dyn Error>> {
     match response {
         ApiResponse::Object(object) => {
             // single object is always a file
-            write_file(object, &path, &client).await?;
+            match clone_path {
+                Some(p) => {
+                    if !Path::new(p).exists() {
+                        tokio::fs::create_dir(p).await?;
+                    }
+
+                    let path = Path::new(p);
+                    write_file(object, &path, &client).await?;
+                }
+                None => {
+                    write_file(object, &path, &client).await?;
+                }
+            }
+
+            // write_file(object, &path, &client).await?;
         }
 
         // Check if given URL is directory and crate root directory based on that
         // This solves creating unneccessary directory problem even if there was only one file
         ApiResponse::Array(_) => {
-            let next_path = path.join(&project_root); // creates root dir
-            tokio::fs::create_dir(&next_path).await?;
+            match clone_path.as_deref() {
+                Some(".") => {
+                    get_dir(&url, &client, &path).await?;
+                }
+                Some(p) => {
+                    if !Path::new(p).exists() {
+                        tokio::fs::create_dir(p).await?;
+                    }
+                    let path = Path::new(p);
+                    get_dir(&url, &client, &path).await?;
+                }
+                None => {
+                    let next_path = path.join(&project_root); // creates root dir
+                    tokio::fs::create_dir(&next_path).await?;
 
-            // recursive directory download starts here
-            get_dir(&url, &client, &next_path).await?;
+                    // recursive directory download starts here
+                    get_dir(&url, &client, &next_path).await?;
+                }
+            }
         }
+
+        ApiResponse::Message(_) => (),
     }
 
     Ok(())
@@ -102,6 +148,7 @@ async fn get_dir(url: &str, client: &Client, path: &Path) -> Result<(), Box<dyn 
         ApiResponse::Object(obj) => {
             write_file(obj, &path, &client).await?;
         }
+
         ApiResponse::Array(arr) => {
             for obj in arr {
                 if obj.object_type == "dir" {
@@ -113,6 +160,8 @@ async fn get_dir(url: &str, client: &Client, path: &Path) -> Result<(), Box<dyn 
                 }
             }
         }
+
+        ApiResponse::Message(_) => (),
     }
 
     Ok(())
