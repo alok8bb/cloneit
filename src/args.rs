@@ -17,12 +17,12 @@ pub struct CommandArgs {
     #[arg(
         value_delimiter = ',',
         action = ArgAction::Set, 
-        num_args = 1, 
+        num_args(1..), 
         required = true,
     )]
     pub urls: Vec<String>,
 
-    #[arg()]
+    #[arg(short, long)]
     pub path: Option<String>,
 
     /// Download and zip directories
