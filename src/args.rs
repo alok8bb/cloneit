@@ -18,6 +18,7 @@ pub struct CommandArgs {
         value_delimiter = ',',
         action = ArgAction::Set, 
         num_args = 1, 
+        required = true,
     )]
     pub urls: Vec<String>,
 
