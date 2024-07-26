@@ -183,6 +183,8 @@ async fn write_file(
                 outfile.write(&chunk).await?;
             }
 
+            println!("{}", format!("downloaded {}", obj.name).green());
+
             Ok(())
         }
         None => return Err(format!("Could not get the download link!").into()),
