@@ -95,11 +95,12 @@ async fn download(
             // single object is always a file
             match clone_path {
                 Some(p) => {
-                    if !Path::new(p).exists() {
-                        tokio::fs::create_dir(p).await?;
+                    let path = Path::new(p);
+
+                    if !path.exists() {
+                        tokio::fs::create_dir(path).await?;
                     }
 
-                    let path = Path::new(p);
                     write_file(object, &path, &client).await?;
                 }
                 None => {
@@ -110,7 +111,7 @@ async fn download(
             // write_file(object, &path, &client).await?;
         }
 
-        // Check if given URL is directory and crate root directory based on that
+        // Check if given URL is directory and create root directory based on that
         // This solves creating unneccessary directory problem even if there was only one file
         ApiResponse::Array(_) => {
             match clone_path.as_deref() {
@@ -118,15 +119,19 @@ async fn download(
                     get_dir(&url, &client, &path).await?;
                 }
                 Some(p) => {
-                    if !Path::new(p).exists() {
-                        tokio::fs::create_dir(p).await?;
-                    }
                     let path = Path::new(p);
+
+                    if !path.exists() {
+                        tokio::fs::create_dir(path).await?;
+                    }
+
                     get_dir(&url, &client, &path).await?;
                 }
                 None => {
                     let next_path = path.join(&project_root); // creates root dir
-                    tokio::fs::create_dir(&next_path).await?;
+                    if !next_path.exists() {
+                        tokio::fs::create_dir(&next_path).await?;
+                    }
 
                     // recursive directory download starts here
                     get_dir(&url, &client, &next_path).await?;
@@ -153,7 +158,9 @@ async fn get_dir(url: &str, client: &Client, path: &Path) -> Result<(), Box<dyn 
             for obj in arr {
                 if obj.object_type == "dir" {
                     let next_path = path.join(obj.name);
-                    tokio::fs::create_dir(&next_path).await?;
+                    if !next_path.exists() {
+                        tokio::fs::create_dir(&next_path).await?;
+                    }
                     get_dir(&obj.url, &client, &next_path).await?;
                 } else {
                     write_file(obj, &path, &client).await?;
