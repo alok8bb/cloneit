@@ -1,10 +1,10 @@
 use crate::parser::Directory;
 use async_recursion::async_recursion;
-use kdam::{term::Colorizer, tqdm, BarExt, Column, RichProgress};
-use reqwest::{header, Client};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::{error::Error, path::Path};
 use tokio::io::AsyncWriteExt;
+use yansi::Paint;
 
 pub type ApiData = Vec<ApiObject>;
 
@@ -177,52 +177,14 @@ async fn write_file(
             let new_path = root_path.join(&obj.name);
 
             let mut res = client.get(download_url).send().await?;
-            let download_size = {
-                if res.status().is_success() {
-                    res.headers()
-                        .get(header::CONTENT_LENGTH)
-                        .and_then(|ct_len| ct_len.to_str().ok())
-                        .and_then(|ct_len| ct_len.parse().ok())
-                        .unwrap_or(0)
-                } else {
-                    return Err(format!(
-                        "Couldn't download file from URL\nError: {}",
-                        res.status()
-                    )
-                    .into());
-                }
-            };
-
-            let mut pb = RichProgress::new(
-                tqdm!(
-                    total = download_size,
-                    unit_scale = true,
-                    unit_divisor = 1024,
-                    unit = "B"
-                ),
-                vec![
-                    Column::text("[bold blue]?"),
-                    Column::Bar,
-                    Column::Percentage(1),
-                    Column::text("•"),
-                    Column::CountTotal,
-                    Column::text("•"),
-                    Column::Rate,
-                ],
-            );
-
-            pb.replace(0, Column::text(&format!("[bold blue]{}", &obj.name)));
 
             let mut outfile = tokio::fs::File::create(&new_path).await?;
-            let mut downloaded = 0;
             while let Some(chunk) = res.chunk().await? {
-                downloaded += chunk.len();
-                pb.update_to(downloaded);
                 outfile.write(&chunk).await?;
             }
 
-            pb.write(format!("downloaded {}", &obj.name).colorize("green"));
-            // pb.clear();
+            println!("{}", format!("downloaded {}", obj.name).green());
+
             Ok(())
         }
         None => return Err(format!("Could not get the download link!").into()),
