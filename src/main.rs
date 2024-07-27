@@ -18,6 +18,18 @@ use clap::Parser;
 async fn main() -> Result<(), Error> {
     let args = CommandArgs::parse();
 
+    env_logger::Builder::from_default_env()
+        .format_timestamp(None)
+        .format_target(false)
+        .format_level(false)
+        .filter_level(if args.quiet {
+            log::LevelFilter::Warn
+        } else {
+            log::LevelFilter::Info
+        })
+        .parse_default_env()
+        .init();
+
     const USE_COLOR: Condition = Condition(|| {
         if std::env::var_os("FORCE_COLOR").is_some() {
             true
@@ -32,20 +44,23 @@ async fn main() -> Result<(), Error> {
 
     let url_count = args.urls.len();
     for (i, url) in args.urls.iter().enumerate() {
-        println!(
+        log::info!(
             "{} Cloning {url:?}...",
             format!("[{}/{}]", i + 1, url_count + 1).bold().blue()
         );
-        println!(
+
+        let steps = 3 + (if args.zipped { 2 } else { 0 });
+
+        log::info!(
             "{} {} Validating url...",
-            "[1/3]".bold().yellow(),
+            format!("[1/{steps}]").bold().yellow(),
             output::LOOKING_GLASS
         );
 
         let path = match parser::parse_url(url) {
             Ok(path) => path,
             Err(err) => {
-                eprintln!("{}", err.to_string().red());
+                log::error!("{}", err.to_string().red());
                 process::exit(0);
             }
         };
@@ -53,43 +68,53 @@ async fn main() -> Result<(), Error> {
         let data = match parser::parse_path(&path, args.path.clone()) {
             Ok(data) => data,
             Err(err) => {
-                eprintln!("{}", err.to_string().red());
+                log::error!("{}", err.to_string().red());
                 process::exit(0);
             }
         };
 
-        println!(
+        log::info!(
             "{} {} Downloading...",
-            "[2/3]".bold().yellow(),
+            format!("[2/{steps}]").bold().yellow(),
             output::TRUCK
         );
 
         match requests::fetch_data(&data).await {
             Err(err) => {
-                eprintln!("{}", err.to_string().red());
+                log::error!("{}", err.to_string().red());
                 process::exit(0);
             }
-            Ok(_) => println!(
+            Ok(_) => log::info!(
                 "{} {} Downloaded successfully.",
-                "[3/3]".bold().yellow(),
+                format!("[3/{steps}]").bold().yellow(),
                 output::SPARKLES
             ),
         };
 
         if args.zipped {
+            log::info!(
+                "{} {} Zipping...",
+                format!("[4/{steps}]").bold().yellow(),
+                output::PACKAGE
+            );
+
             let dst_zip = format!("{}.zip", &data.root);
             let zipper = ZipArchiver::new(&data.root, &dst_zip);
             match zipper.run() {
-                Ok(_) => (),
+                Ok(_) => log::info!(
+                    "{} {} Zipped successfully.",
+                    format!("[5/{steps}]").bold().yellow(),
+                    output::SPARKLES
+                ),
                 Err(ZipError::FileNotFound) => {
-                    eprintln!("{}", "\ncould not zip the downloaded file".bold().red())
+                    log::error!("{}", "Failed to zip files".bold().red())
                 }
-                Err(e) => eprintln!("{}", e.to_string().bold().red()),
+                Err(e) => log::error!("{}", e.to_string().bold().red()),
             }
         }
     }
 
-    println!(
+    log::info!(
         "{} Downloaded {:?} director{}.",
         format!("[{}/{}]", url_count + 1, url_count + 1)
             .bold()
