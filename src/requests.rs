@@ -190,7 +190,7 @@ async fn write_file(
                 outfile.write(&chunk).await?;
             }
 
-            println!("{}", format!("downloaded {}", obj.name).green());
+            println!("{}", format!("+ {}", obj.name).green());
 
             Ok(())
         }

@@ -30,10 +30,14 @@ async fn main() -> Result<(), Error> {
 
     yansi::whenever(Condition::cached((USE_COLOR)()));
 
-    for url in &args.urls {
-        println!("Getting: {:?}", url);
+    let url_count = args.urls.len();
+    for (i, url) in args.urls.iter().enumerate() {
         println!(
-            "{} {}Validating url...",
+            "{} Cloning {url:?}...",
+            format!("[{}/{}]", i + 1, url_count + 1).bold().blue()
+        );
+        println!(
+            "{} {} Validating url...",
             "[1/3]".bold().yellow(),
             output::LOOKING_GLASS
         );
@@ -55,7 +59,7 @@ async fn main() -> Result<(), Error> {
         };
 
         println!(
-            "{} {}Downloading...",
+            "{} {} Downloading...",
             "[2/3]".bold().yellow(),
             output::TRUCK
         );
@@ -66,7 +70,7 @@ async fn main() -> Result<(), Error> {
                 process::exit(0);
             }
             Ok(_) => println!(
-                "{} {}Downloaded Successfully.",
+                "{} {} Downloaded successfully.",
                 "[3/3]".bold().yellow(),
                 output::SPARKLES
             ),
@@ -86,9 +90,12 @@ async fn main() -> Result<(), Error> {
     }
 
     println!(
-        "
-        [+] Downloaded {:?} dir(s).",
-        &args.urls.len()
+        "{} Downloaded {:?} director{}.",
+        format!("[{}/{}]", url_count + 1, url_count + 1)
+            .bold()
+            .blue(),
+        &url_count,
+        if url_count == 1 { "y" } else { "ies" },
     );
 
     Ok(())
