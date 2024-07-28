@@ -28,4 +28,8 @@ pub struct CommandArgs {
     /// Download and zip directories
     #[arg(short, long = "zip")]
     pub zipped: bool,
+
+    /// Disable verbose logging
+    #[arg(short, long)]
+    pub quiet: bool,
 }

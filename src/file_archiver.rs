@@ -59,7 +59,7 @@ impl ZipArchiver {
             // Write file or directory explicitly
             // Some unzip tools unzip files with directory paths correctly, some do not!
             if entry_path.is_file() {
-                println!("[+] Adding file {:?} as {:?} ...", entry_path, entry_name);
+                log::info!("[+] Adding file {:?} as {:?}...", entry_path, entry_name);
                 zip.start_file(entry_name, options)?;
                 let mut fh = File::open(entry_path)?;
 
@@ -69,7 +69,7 @@ impl ZipArchiver {
             } else if !entry_name.is_empty() {
                 // Only if not root! Avoids path spec / warning
                 // and mapname conversion failed error on unzip
-                println!("[+] Adding dir {:?} as {:?} ...", entry_path, entry_name);
+                log::info!("[+] Adding dir {:?} as {:?}...", entry_path, entry_name);
                 zip.add_directory(entry_name, options)?;
             }
         }
@@ -103,7 +103,7 @@ impl ZipArchiver {
             file,
         )?;
 
-        println!("[+] Zip archived: {:?}", &self.m_dest_zip_fname);
+        log::info!("[+] Zip archived as {:?}.", &self.m_dest_zip_fname);
 
         Ok(())
     }
