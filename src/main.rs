@@ -24,7 +24,7 @@ async fn download_and_zip(url: &str, args: &Args) -> Result<()> {
     );
 
     let url = Url::parse(url)?;
-    let data = Directory::new(url, args.path.clone());
+    let data = Directory::new(url, args.path.clone())?;
 
     log::info!(
         "{} {} Downloading...",

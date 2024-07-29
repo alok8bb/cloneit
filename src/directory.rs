@@ -1,3 +1,4 @@
+use color_eyre::eyre::{OptionExt, Result};
 use url::Url;
 
 #[derive(Debug)]
@@ -11,24 +12,30 @@ pub struct Directory {
 }
 
 impl Directory {
-    pub fn new(url: Url, clone_path: Option<String>) -> Self {
-        let mut segments = url.path_segments().expect("URL has path segments");
+    pub fn new(url: Url, clone_path: Option<String>) -> Result<Self> {
+        let mut segments = url
+            .path_segments()
+            .expect("URL has path segments")
+            .filter(|s| !s.is_empty());
 
-        let username = segments.next().expect("URL contains username").to_string();
+        let username = segments
+            .next()
+            .ok_or_eyre("URL must contain username")?
+            .to_string();
         let repository = segments
             .next()
-            .expect("URL contains repository")
+            .ok_or_eyre("URL must contain repository")?
             .to_string();
         let branch = segments.nth(1).unwrap_or("").to_string();
         let path = segments.collect::<Vec<_>>().join("/");
 
-        Directory {
+        Ok(Directory {
             username,
             repository: repository.clone(),
             branch,
             root: repository.clone(),
             path,
             clone_path,
-        }
+        })
     }
 }
