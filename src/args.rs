@@ -12,7 +12,7 @@ use clap::{ArgAction, Parser};
 
 {all-args}{after-help}
 ")]
-pub struct CommandArgs {
+pub struct Args {
     /// URLs for GitHub directories or files to download. You can pass a single URL or multiple comma-delimited URLs
     #[arg(
         value_delimiter = ',',
