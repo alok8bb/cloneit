@@ -18,8 +18,8 @@ use clap::Parser;
 
 static STEP: Style = Color::Green.bold();
 
-async fn download_and_zip(url: &str, args: &Args) -> Result<()> {
-    let steps = if args.zipped { 3 } else { 2 };
+async fn download_from_url(url: &str, args: &Args) -> Result<()> {
+    let steps = if args.zip { 3 } else { 2 };
 
     log::info!(
         "{} {} Validating url...",
@@ -38,7 +38,7 @@ async fn download_and_zip(url: &str, args: &Args) -> Result<()> {
 
     requests::fetch_and_download(&data).await?;
 
-    if args.zipped {
+    if args.zip {
         log::info!(
             "{} {} Zipping...",
             format!("[3/{steps}]").paint(STEP),
@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
             format!("[{}/{}]", i + 1, url_count).bold().blue()
         );
 
-        download_and_zip(url, &args).await?;
+        download_from_url(url, &args).await?;
     }
 
     log::info!(

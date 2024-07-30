@@ -26,8 +26,8 @@ pub struct Args {
     pub path: Option<String>,
 
     /// Download and zip directories
-    #[arg(short, long = "zip")]
-    pub zipped: bool,
+    #[arg(short, long)]
+    pub zip: bool,
 
     /// Disable verbose logging
     #[arg(short, long)]
