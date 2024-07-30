@@ -1,8 +1,9 @@
 #![warn(clippy::all)]
 use color_eyre::eyre::Result;
-use directory::Directory;
+use log::Level;
+use std::io::Write;
 use url::Url;
-use yansi::{Condition, Paint};
+use yansi::{Color, Condition, Paint, Style};
 
 pub mod archiver;
 pub mod args;
@@ -12,14 +13,17 @@ pub mod requests;
 
 use crate::archiver::ZipArchiver;
 use crate::args::Args;
+use crate::directory::Directory;
 use clap::Parser;
 
+static STEP: Style = Color::Green.bold();
+
 async fn download_and_zip(url: &str, args: &Args) -> Result<()> {
-    let steps = 3 + if args.zipped { 2 } else { 0 };
+    let steps = if args.zipped { 3 } else { 2 };
 
     log::info!(
         "{} {} Validating url...",
-        format!("[1/{steps}]").bold().yellow(),
+        format!("[1/{steps}]").paint(STEP),
         emojis::LOOKING_GLASS
     );
 
@@ -28,35 +32,22 @@ async fn download_and_zip(url: &str, args: &Args) -> Result<()> {
 
     log::info!(
         "{} {} Downloading...",
-        format!("[2/{steps}]").bold().yellow(),
+        format!("[2/{steps}]").paint(STEP),
         emojis::TRUCK
     );
 
     requests::fetch_and_download(&data).await?;
 
-    log::info!(
-        "{} {} Downloaded successfully.",
-        format!("[3/{steps}]").bold().yellow(),
-        emojis::SPARKLES
-    );
-
     if args.zipped {
         log::info!(
             "{} {} Zipping...",
-            format!("[4/{steps}]").bold().yellow(),
+            format!("[3/{steps}]").paint(STEP),
             emojis::PACKAGE
         );
 
-        let dst_zip = format!("{}.zip", &data.root);
-        let zipper = ZipArchiver::new(&data.root, &dst_zip);
-
+        let dest = format!("{}.zip", &data.root);
+        let zipper = ZipArchiver::new(&data.root, &dest);
         zipper.run()?;
-
-        log::info!(
-            "{} {} Zipped successfully.",
-            format!("[5/{steps}]").bold().yellow(),
-            emojis::SPARKLES
-        );
     }
 
     Ok(())
@@ -68,9 +59,17 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     env_logger::Builder::from_default_env()
-        .format_timestamp(None)
-        .format_target(false)
-        .format_level(false)
+        .format(|buf, record| {
+            let color = match record.level() {
+                Level::Info => return writeln!(buf, "{}", record.args()),
+
+                Level::Error => Color::Red,
+                Level::Warn => Color::Yellow,
+                Level::Debug => Color::Magenta,
+                Level::Trace => Color::Blue,
+            };
+            writeln!(buf, "[{}] {}", record.level().paint(color), record.args())
+        })
         .filter_level(if args.quiet {
             log::LevelFilter::Warn
         } else {
@@ -103,8 +102,7 @@ async fn main() -> Result<()> {
     }
 
     log::info!(
-        "{} Downloaded {:?} director{}.",
-        format!("[{}/{}]", url_count, url_count).bold().blue(),
+        "Downloaded {:?} director{}.",
         &url_count,
         if url_count == 1 { "y" } else { "ies" },
     );
