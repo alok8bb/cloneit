@@ -1,8 +1,9 @@
-use crate::parser::Directory;
+use crate::directory::Directory;
 use async_recursion::async_recursion;
+use color_eyre::eyre::{eyre, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, path::Path};
+use std::path::Path;
 use tokio::io::AsyncWriteExt;
 use yansi::Paint;
 
@@ -41,7 +42,7 @@ pub struct Links {
     html: String,
 }
 
-pub async fn fetch_data(data: &Directory) -> Result<(), Box<dyn Error>> {
+pub async fn fetch_and_download(data: &Directory) -> Result<()> {
     let url = if data.path.is_empty() {
         format!(
             "https://api.github.com/repos/{}/{}/contents/",
@@ -59,7 +60,7 @@ pub async fn fetch_data(data: &Directory) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn build_request(url: &str, client: &Client) -> Result<ApiResponse, Box<dyn Error>> {
+async fn build_request(url: &str, client: &Client) -> Result<ApiResponse> {
     let res: String = client
         .get(url)
         .header("User-Agent", "request")
@@ -71,20 +72,16 @@ async fn build_request(url: &str, client: &Client) -> Result<ApiResponse, Box<dy
     match serde_json::from_str(&res) {
         Ok(val) => {
             match val {
-                ApiResponse::Message(msg_object) => return Err(msg_object.message.into()),
+                ApiResponse::Message(msg_object) => return Err(eyre!(msg_object.message)),
                 _ => (),
             }
             Ok(val)
         }
-        Err(_) => Err(format!("Error parsing api object, check the provided url").into()),
+        Err(_) => Err(eyre!("Error parsing api object, check the provided url")),
     }
 }
 
-async fn download(
-    url: &str,
-    project_root: &str,
-    clone_path: &Option<String>,
-) -> Result<(), Box<dyn Error>> {
+async fn download(url: &str, project_root: &str, clone_path: &Option<String>) -> Result<()> {
     let client = Client::new();
     let path = Path::new("./");
 
@@ -146,7 +143,7 @@ async fn download(
 }
 
 #[async_recursion]
-async fn get_dir(url: &str, client: &Client, path: &Path) -> Result<(), Box<dyn Error>> {
+async fn get_dir(url: &str, client: &Client, path: &Path) -> Result<()> {
     let resp = build_request(url, client).await?;
 
     match resp {
@@ -174,11 +171,7 @@ async fn get_dir(url: &str, client: &Client, path: &Path) -> Result<(), Box<dyn 
     Ok(())
 }
 
-async fn write_file(
-    obj: ApiObject,
-    root_path: &Path,
-    client: &Client,
-) -> Result<(), Box<dyn Error>> {
+async fn write_file(obj: ApiObject, root_path: &Path, client: &Client) -> Result<()> {
     match &obj.download_url {
         Some(download_url) => {
             let new_path = root_path.join(&obj.name);
@@ -194,6 +187,6 @@ async fn write_file(
 
             Ok(())
         }
-        None => return Err(format!("Could not get the download link!").into()),
+        None => return Err(eyre!("Could not get the download link")),
     }
 }

@@ -1,27 +1,75 @@
 #![warn(clippy::all)]
-use std::io::Error;
-use std::process;
-use yansi::{Condition, Paint};
-use zip::result::ZipError;
+use color_eyre::eyre::Result;
+use log::Level;
+use std::io::Write;
+use url::Url;
+use yansi::{Color, Condition, Paint, Style};
 
+pub mod archiver;
 pub mod args;
-pub mod file_archiver;
-pub mod output;
-pub mod parser;
+pub mod directory;
+pub mod emojis;
 pub mod requests;
 
-use crate::args::CommandArgs;
-use crate::file_archiver::ZipArchiver;
+use crate::archiver::ZipArchiver;
+use crate::args::Args;
+use crate::directory::Directory;
 use clap::Parser;
 
+static STEP: Style = Color::Green.bold();
+
+async fn download_from_url(url: &str, args: &Args) -> Result<()> {
+    let steps = if args.zip { 3 } else { 2 };
+
+    log::info!(
+        "{} {} Validating url...",
+        format!("[1/{steps}]").paint(STEP),
+        emojis::LOOKING_GLASS
+    );
+
+    let url = Url::parse(url)?;
+    let data = Directory::new(url, args.path.clone())?;
+
+    log::info!(
+        "{} {} Downloading...",
+        format!("[2/{steps}]").paint(STEP),
+        emojis::TRUCK
+    );
+
+    requests::fetch_and_download(&data).await?;
+
+    if args.zip {
+        log::info!(
+            "{} {} Zipping...",
+            format!("[3/{steps}]").paint(STEP),
+            emojis::PACKAGE
+        );
+
+        let dest = format!("{}.zip", &data.root);
+        let zipper = ZipArchiver::new(&data.root, &dest);
+        zipper.run()?;
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Error> {
-    let args = CommandArgs::parse();
+async fn main() -> Result<()> {
+    color_eyre::install()?;
+    let args = Args::parse();
 
     env_logger::Builder::from_default_env()
-        .format_timestamp(None)
-        .format_target(false)
-        .format_level(false)
+        .format(|buf, record| {
+            let color = match record.level() {
+                Level::Info => return writeln!(buf, "{}", record.args()),
+
+                Level::Error => Color::Red,
+                Level::Warn => Color::Yellow,
+                Level::Debug => Color::Magenta,
+                Level::Trace => Color::Blue,
+            };
+            writeln!(buf, "[{}] {}", record.level().paint(color), record.args())
+        })
         .filter_level(if args.quiet {
             log::LevelFilter::Warn
         } else {
@@ -43,82 +91,18 @@ async fn main() -> Result<(), Error> {
     yansi::whenever(Condition::cached((USE_COLOR)()));
 
     let url_count = args.urls.len();
+
     for (i, url) in args.urls.iter().enumerate() {
         log::info!(
             "{} Cloning {url:?}...",
-            format!("[{}/{}]", i + 1, url_count + 1).bold().blue()
+            format!("[{}/{}]", i + 1, url_count).bold().blue()
         );
 
-        let steps = 3 + (if args.zipped { 2 } else { 0 });
-
-        log::info!(
-            "{} {} Validating url...",
-            format!("[1/{steps}]").bold().yellow(),
-            output::LOOKING_GLASS
-        );
-
-        let path = match parser::parse_url(url) {
-            Ok(path) => path,
-            Err(err) => {
-                log::error!("{}", err.to_string().red());
-                process::exit(0);
-            }
-        };
-
-        let data = match parser::parse_path(&path, args.path.clone()) {
-            Ok(data) => data,
-            Err(err) => {
-                log::error!("{}", err.to_string().red());
-                process::exit(0);
-            }
-        };
-
-        log::info!(
-            "{} {} Downloading...",
-            format!("[2/{steps}]").bold().yellow(),
-            output::TRUCK
-        );
-
-        match requests::fetch_data(&data).await {
-            Err(err) => {
-                log::error!("{}", err.to_string().red());
-                process::exit(0);
-            }
-            Ok(_) => log::info!(
-                "{} {} Downloaded successfully.",
-                format!("[3/{steps}]").bold().yellow(),
-                output::SPARKLES
-            ),
-        };
-
-        if args.zipped {
-            log::info!(
-                "{} {} Zipping...",
-                format!("[4/{steps}]").bold().yellow(),
-                output::PACKAGE
-            );
-
-            let dst_zip = format!("{}.zip", &data.root);
-            let zipper = ZipArchiver::new(&data.root, &dst_zip);
-            match zipper.run() {
-                Ok(_) => log::info!(
-                    "{} {} Zipped successfully.",
-                    format!("[5/{steps}]").bold().yellow(),
-                    output::SPARKLES
-                ),
-                Err(ZipError::FileNotFound) => {
-                    log::error!("{}", "Failed to zip files".bold().red())
-                }
-                Err(e) => log::error!("{}", e.to_string().bold().red()),
-            }
-        }
+        download_from_url(url, &args).await?;
     }
 
     log::info!(
-        "{} Downloaded {:?} director{}.",
-        format!("[{}/{}]", url_count + 1, url_count + 1)
-            .bold()
-            .blue(),
+        "Downloaded {:?} director{}.",
         &url_count,
         if url_count == 1 { "y" } else { "ies" },
     );
