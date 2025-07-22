@@ -2,7 +2,7 @@ use crate::parser::Directory;
 use async_recursion::async_recursion;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, path::Path};
+use std::{env, error::Error, path::Path};
 use tokio::io::AsyncWriteExt;
 use yansi::Paint;
 
@@ -60,13 +60,13 @@ pub async fn fetch_data(data: &Directory) -> Result<(), Box<dyn Error>> {
 }
 
 async fn build_request(url: &str, client: &Client) -> Result<ApiResponse, Box<dyn Error>> {
-    let res: String = client
-        .get(url)
-        .header("User-Agent", "request")
-        .send()
-        .await?
-        .text()
-        .await?;
+    let mut req = client.get(url).header("User-Agent", "request");
+
+    if let Ok(token) = env::var("GITHUB_TOKEN") {
+        req = req.header("Authorization", format!("token {}", token));
+    }
+
+    let res: String = req.send().await?.text().await?;
 
     match serde_json::from_str(&res) {
         Ok(val) => {
@@ -76,7 +76,7 @@ async fn build_request(url: &str, client: &Client) -> Result<ApiResponse, Box<dy
             }
             Ok(val)
         }
-        Err(_) => Err(format!("Error parsing api object, check the provided url").into()),
+        Err(_) => Err("Error parsing api object, check the provided url".into()),
     }
 }
 
@@ -183,7 +183,13 @@ async fn write_file(
         Some(download_url) => {
             let new_path = root_path.join(&obj.name);
 
-            let mut res = client.get(download_url).send().await?;
+            let mut req = client.get(download_url);
+
+            if let Ok(token) = env::var("GITHUB_TOKEN") {
+                req = req.header("Authorization", format!("token {token}"));
+            }
+
+            let mut res = req.send().await?;
 
             let mut outfile = tokio::fs::File::create(&new_path).await?;
             while let Some(chunk) = res.chunk().await? {
